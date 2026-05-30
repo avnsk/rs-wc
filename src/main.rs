@@ -5,6 +5,8 @@ use clap::Parser;
 struct Arguments {
     #[arg(short)]
     c: bool,
+    #[arg(short)]
+    l: bool,
     file: String,
 }
 fn main() {
@@ -20,5 +22,9 @@ fn main() {
     if args.c {
         let byte_count = content.len();
         println!("{}, {}", byte_count, args.file);
+    }
+    if args.l {
+        let line_count = content.iter().filter(|&&x| x == b'\n').count();
+        println!("{}, {}", line_count, args.file);
     }
 }
