@@ -9,6 +9,8 @@ struct Arguments {
     l: bool,
     #[arg(short)]
     w: bool,
+    #[arg(short)]
+    m: bool,
     file: String,
 }
 fn main() {
@@ -35,5 +37,13 @@ fn main() {
             .filter(|chunk| !chunk[0].is_ascii_whitespace())
             .count();
         println!("{}, {}", word_count, args.file);
+    }
+
+    if args.m {
+        let char_count = content
+            .iter()
+            .filter(|&&byte| (byte & 0xC0) != 0x80)
+            .count();
+        println!("{}, {}", char_count, args.file);
     }
 }
