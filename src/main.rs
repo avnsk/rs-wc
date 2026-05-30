@@ -1,3 +1,11 @@
+use clap::Parser;
+#[derive(Parser, Debug)]
+struct Arguments {
+    #[arg(short)]
+    c: bool,
+    file: String,
+}
 fn main() {
-    println!("Hello, world!");
+    let args = Arguments::parse();
+    println!("{:?}", args);
 }
