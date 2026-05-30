@@ -1,6 +1,6 @@
 use std::{
-    fs,
-    io::{self, Read},
+    fs::File,
+    io::{self, BufReader, Read},
 };
 
 use clap::Parser;
@@ -22,45 +22,68 @@ fn main() {
         args.c = true;
         args.l = true;
         args.w = true;
+        args.m = true;
     }
-    let mut result = Vec::new();
-    let mut content = Vec::new();
-    if let Some(file) = &args.file {
-        content = match fs::read(&file) {
-            Ok(content) => content,
+    let stream: Box<dyn Read> = match &args.file {
+        Some(file_name) => match File::open(file_name) {
+            Ok(file) => Box::new(file),
             Err(e) => {
-                eprintln!("Error: Could not read file '{}'.", file);
-                eprintln!("Details: {}", e);
+                eprintln!("Error: Could not open file '{}' Details: {}", file_name, e);
                 return;
             }
-        };
-    } else {
-        if let Err(e) = io::stdin().read_to_end(&mut content) {
-            eprintln!("Error: Could not read from stdin.");
-            eprintln!("Details: {}", e);
-            return;
+        },
+        None => Box::new(io::stdin()),
+    };
+
+    let mut reader = BufReader::new(stream);
+    let mut buffer = [0u8; 16384];
+    let mut byte_count = 0;
+    let mut line_count = 0;
+    let mut word_count = 0;
+    let mut char_count = 0;
+
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(bytes_read) => {
+                let content = &buffer[..bytes_read];
+                if args.c {
+                    byte_count += content.len();
+                }
+                if args.l {
+                    line_count += content.iter().filter(|&&x| x == b'\n').count();
+                }
+                if args.w {
+                    word_count += content
+                        .chunk_by(|a, b| a.is_ascii_whitespace() == b.is_ascii_whitespace())
+                        .filter(|chunk| !chunk[0].is_ascii_whitespace())
+                        .count();
+                }
+                if args.m {
+                    char_count += content
+                        .iter()
+                        .filter(|&&byte| (byte & 0xC0) != 0x80)
+                        .count();
+                }
+            }
+            Err(e) => {
+                eprintln!("Error reading stream: {}", e);
+                return;
+            }
         }
     }
+
+    let mut result = Vec::new();
     if args.c {
-        let byte_count = content.len();
         result.push(byte_count.to_string());
     }
     if args.l {
-        let line_count = content.iter().filter(|&&x| x == b'\n').count();
         result.push(line_count.to_string());
     }
     if args.w {
-        let word_count = content
-            .chunk_by(|a, b| a.is_ascii_whitespace() == b.is_ascii_whitespace())
-            .filter(|chunk| !chunk[0].is_ascii_whitespace())
-            .count();
         result.push(word_count.to_string());
     }
     if args.m {
-        let char_count = content
-            .iter()
-            .filter(|&&byte| (byte & 0xC0) != 0x80)
-            .count();
         result.push(char_count.to_string());
     }
     if let Some(file_name) = args.file {
