@@ -1,4 +1,7 @@
-use std::fs;
+use std::{
+    fs,
+    io::{self, Read},
+};
 
 use clap::Parser;
 #[derive(Parser, Debug)]
@@ -11,7 +14,7 @@ struct Arguments {
     w: bool,
     #[arg(short)]
     m: bool,
-    file: String,
+    file: Option<String>,
 }
 fn main() {
     let mut args = Arguments::parse();
@@ -21,14 +24,23 @@ fn main() {
         args.w = true;
     }
     let mut result = Vec::new();
-    let content = match fs::read(&args.file) {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("Error: Could not read file '{}'.", args.file);
+    let mut content = Vec::new();
+    if let Some(file) = &args.file {
+        content = match fs::read(&file) {
+            Ok(content) => content,
+            Err(e) => {
+                eprintln!("Error: Could not read file '{}'.", file);
+                eprintln!("Details: {}", e);
+                return;
+            }
+        };
+    } else {
+        if let Err(e) = io::stdin().read_to_end(&mut content) {
+            eprintln!("Error: Could not read from stdin.");
             eprintln!("Details: {}", e);
             return;
         }
-    };
+    }
     if args.c {
         let byte_count = content.len();
         result.push(byte_count.to_string());
@@ -51,5 +63,9 @@ fn main() {
             .count();
         result.push(char_count.to_string());
     }
-    println!("{}, {}", result.join(" "), args.file);
+    if let Some(file_name) = args.file {
+        println!("{} {}", result.join(" "), file_name);
+    } else {
+        println!("{}", result.join(" "));
+    }
 }
