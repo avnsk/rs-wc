@@ -7,6 +7,8 @@ struct Arguments {
     c: bool,
     #[arg(short)]
     l: bool,
+    #[arg(short)]
+    w: bool,
     file: String,
 }
 fn main() {
@@ -26,5 +28,12 @@ fn main() {
     if args.l {
         let line_count = content.iter().filter(|&&x| x == b'\n').count();
         println!("{}, {}", line_count, args.file);
+    }
+    if args.w {
+        let word_count = content
+            .chunk_by(|a, b| a.is_ascii_whitespace() == b.is_ascii_whitespace())
+            .filter(|chunk| !chunk[0].is_ascii_whitespace())
+            .count();
+        println!("{}, {}", word_count, args.file);
     }
 }
